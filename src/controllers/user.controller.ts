@@ -27,7 +27,6 @@ const generateRefreshTokenAndAccessToken = async (user_id: string): Promise<{ ac
     }
 }
 
-
 // @route   POST /api/v1/users/check-email
 // @desc    Check if email exists
 // @access  Public
@@ -63,7 +62,7 @@ export const checkEmail = asyncHandler(async (req: Request, res: Response, next:
     }
 });
 
-// @route   POST /api/v1/users/signup
+// @route   POST /api/v1/users/register
 // @desc    User Register
 // @access  Public
 export const register = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -141,7 +140,7 @@ export const register = asyncHandler(async (req: Request, res: Response, next: N
     }
 });
 
-// @route   POST /api/v1/users/signin
+// @route   POST /api/v1/users/login
 // @desc    User login
 // @access  Public
 export const login = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -202,6 +201,35 @@ export const login = asyncHandler(async (req: Request, res: Response, next: Next
                 },
                 "User Successfully Logged In"
             ));
+    } catch (error) {
+        next(error);
+    }
+});
+
+// @route   POST /api/v1/users/logout
+// @desc    User logout
+// @access  Private
+export const logout = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        if (!req.user) {
+            throw new APIError(401, "Unauthorized Request, Signin Again");
+        }
+
+        await User.findByIdAndUpdate(
+            req.user?._id,
+            {
+                $set: {
+                    refreshToken: ""
+                }
+            }
+        );
+
+        res
+            .status(200)
+            .clearCookie("accessToken", { httpOnly: true, secure: true })
+            .clearCookie("refreshToken", { httpOnly: true, secure: true })
+            .json(new APIResponse(200, {}, "User Signout Successfully"))
+            .end();
     } catch (error) {
         next(error);
     }
