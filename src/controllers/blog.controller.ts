@@ -102,7 +102,48 @@ export const getBlogDetails = asyncHandler(async (req: Request, res: Response, n
             throw new APIError(400, "Blog Not Found");
         }
 
-        res.status(201).json(new APIResponse(201, { blog }, "Blog Fetched Successfully"));
+        res.status(200).json(new APIResponse(200, { blog }, "Blog Fetched Successfully"));
+    } catch (error) {
+        next(error);
+    }
+});
+
+// @route   PUT /api/v1/blogs/:id
+// @desc    Update blog
+// @access  Private
+export const updateBlog = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const user_id = req.user?._id;
+        const blog_id = new mongoose.Types.ObjectId(req.params.id || req.body.id);
+        const { title, content } = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(user_id)) {
+            throw new APIError(401, "Unauthorized Request, Sign in Again");
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(blog_id)) {
+            throw new APIError(400, "Blog ID Is Required");
+        }
+
+        const blog = await Blog.findById(blog_id);
+        if (!blog) {
+            throw new APIError(400, "Blog Not Found");
+        }
+
+        if (!title && !content) {
+            throw new APIError(400, "Atleast One Field Is Required");
+        }
+
+        if (title) {
+            blog.title = title;
+        }
+        if (content) {
+            blog.content = content;
+        }
+
+        const updatedBlog = await blog.save();
+
+        res.status(200).json(new APIResponse(200, { blog: updatedBlog }, "Blog Updated Successfully"));
     } catch (error) {
         next(error);
     }
