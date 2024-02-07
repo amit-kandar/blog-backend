@@ -31,7 +31,7 @@ import blogRoutes from './routes/blog.routes';
 
 // Declare routes
 app.use('/api/v1/users', userRoutes);
-app.use('/api/v1/users', blogRoutes);
+app.use('/api/v1/blogs', blogRoutes);
 
 app.get("/", (req, res) => {
     res.status(200).json("Hello World");
