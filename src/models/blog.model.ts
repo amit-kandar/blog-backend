@@ -8,7 +8,6 @@ interface BlogDocument extends Document {
     };
     content: string;
     author: Schema.Types.ObjectId;
-    date: Date;
     tags: Array<string>;
 }
 
@@ -37,11 +36,6 @@ const BlogSchema = new Schema<BlogDocument, Model<BlogDocument>>({
         type: Schema.Types.ObjectId,
         required: true,
         ref: 'User'
-    },
-    date: {
-        type: Date,
-        default: Date.now,
-        required: true,
     },
     tags: {
         type: [String],
