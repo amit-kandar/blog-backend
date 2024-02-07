@@ -6,6 +6,7 @@ import { User, UserDocument } from "../models/user.model";
 import { APIResponse } from "../utils/APIResponse";
 import { UploadApiResponse } from "cloudinary";
 import jwt from "jsonwebtoken";
+import { v2 as cloudinary } from "cloudinary";
 import redisClient from "../config/redis";
 import { uploadToCloudinary } from "../utils/cloudinary";
 import { createImageWithInitials } from "../utils/createImage";
@@ -360,6 +361,60 @@ export const updateUserDetails = asyncHandler(async (req: Request, res: Response
             { user: updatedUserDetails },
             "User updated successfully"
         ));
+    } catch (error) {
+        next(error);
+    }
+});
+
+// @route   PUT /api/v1/users/change-avatar
+// @desc    Change Avatar
+// @access  Private
+export const changeAvatar = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const user = req.user;
+        if (!user) {
+            throw new APIError(401, "Unauthorized Request, Signin Again");
+        }
+
+        if (!req.file?.path) {
+            throw new APIError(400, "Image Not Found");
+        }
+        const avatarLocalPath: string | undefined = req.file.path;
+
+        const avatar: UploadApiResponse | string = await uploadToCloudinary(avatarLocalPath, "users");
+
+        let avatarURL: string;
+        let public_id: string;
+
+        if (typeof avatar === 'object' && avatar.hasOwnProperty('url')) {
+            avatarURL = (avatar as UploadApiResponse).url;
+            public_id = (avatar as UploadApiResponse).public_id;
+        } else {
+            throw new APIError(400, "Invalid Cloudinary Response");
+        }
+
+        const oldPublicId: string = user.avatar.public_id;
+        if (!oldPublicId) {
+            throw new APIError(400, "Previous Public Id Not Found");
+        }
+
+        await cloudinary.uploader.destroy(oldPublicId);
+
+        const updatedUser = await User.findOneAndUpdate(
+            { _id: user._id },
+            { $set: { avatar: { url: avatarURL, public_id: public_id } } },
+            { new: true, select: "-password -refreshToken" }
+        );
+        if (!updatedUser) {
+            throw new APIError(400, "Failed to update the user");
+        }
+
+        user.avatar.url = updatedUser.avatar.url
+        user.avatar.public_id = updatedUser.avatar.public_id
+
+        await redisClient.set(`${user._id}`, JSON.stringify(user));
+
+        res.status(200).json(new APIResponse(200, user, "Avatar Updated Successfully"));
     } catch (error) {
         next(error);
     }
