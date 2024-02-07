@@ -281,3 +281,24 @@ export const getAccessTokenByRefreshToken = asyncHandler(async (req: Request, re
         next(error);
     }
 });
+
+// @route   GET /api/v1/users/
+// @desc    Get user details
+// @access  Private
+export const getUserDetails = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const user = req.user;
+
+        if (!user) {
+            throw new APIError(401, "Unauthorized Request, Signin Again");
+        }
+
+        res.status(200).json(new APIResponse(
+            200,
+            user,
+            "Successfully Fetched User Details"
+        ));
+    } catch (error) {
+        next(error);
+    }
+});
