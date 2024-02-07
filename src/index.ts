@@ -1,9 +1,10 @@
 import dotenv from "dotenv";
 import { connectToDB } from "./database";
 import { app } from "./app";
+import logger from "./config/logger";
 
 if (process.env.NODE_ENV === 'development') {
-    dotenv.config({ path: '.env.dev' });
+    dotenv.config({ path: '.env' });
 } else if (process.env.NODE_ENV === 'test') {
     dotenv.config({ path: '.env.test' });
 } else if (process.env.NODE_ENV === 'production') {
@@ -15,11 +16,11 @@ const PORT = process.env.PORT || 8080;
 connectToDB()
     .then(() => {
         app.on("error", err => {
-            console.error("Error: ", err);
+            logger.error("Error: ", err);
 
         })
         app.listen(PORT, () => {
-            console.info(`server is running at port ${PORT}`);
+            logger.info(`server is running at port ${PORT}`);
         })
     })
-    .catch(err => console.error("MongoDB connection failed!!", err))
+    .catch(err => logger.error("MongoDB connection failed!!", err))
