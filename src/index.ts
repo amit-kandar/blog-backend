@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import { v2 as cloudinary } from "cloudinary";
 import { connectToDB } from "./database";
 import { app } from "./app";
 import logger from "./config/logger";
@@ -12,6 +13,13 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 const PORT = process.env.PORT || 8080;
+
+// Define the configuration parameters
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME || '',
+    api_key: process.env.CLOUDINARY_API_KEY || '',
+    api_secret: process.env.CLOUDINARY_API_SECRET || ''
+});
 
 connectToDB()
     .then(() => {
