@@ -4,6 +4,7 @@ import { DATA_LIMIT } from "./constants";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import redisClient from "./config/redis";
+import { errorHandler } from "./middlewares/errorHandler.middleware";
 
 const app: Application = express();
 
@@ -26,10 +27,11 @@ redisClient.connect();
 
 //Import Routes
 import userRoutes from './routes/user.routes';
-import { errorHandler } from "./middlewares/errorHandler.middleware";
+import blogRoutes from './routes/blog.routes';
 
 // Declare routes
 app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/users', blogRoutes);
 
 app.get("/", (req, res) => {
     res.status(200).json("Hello World");
