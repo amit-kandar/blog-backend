@@ -10,7 +10,7 @@ import { uploadToCloudinary } from "../utils/cloudinary";
 import { Blog } from "../models/blog.model";
 
 // @route   POST /api/v1/blogs/
-// @desc    Check if email exists
+// @desc    Create blog
 // @access  Private
 export const createBlog = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -75,6 +75,34 @@ export const createBlog = asyncHandler(async (req: Request, res: Response, next:
         }
 
         res.status(201).json(new APIResponse(201, blog, "Blog Successfully Created"));
+    } catch (error) {
+        next(error);
+    }
+});
+
+// @route   GET /api/v1/blogs/:id
+// @desc    Get blog
+// @access  Private
+export const getBlogDetails = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const user_id = req.user?._id;
+        const blog_id = new mongoose.Types.ObjectId(req.params.id || req.body.id);
+
+        if (!mongoose.Types.ObjectId.isValid(user_id)) {
+            throw new APIError(401, "Unauthorized Request, Sign in Again");
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(blog_id)) {
+            throw new APIError(400, "Blog ID Is Required");
+        }
+
+        const blog = await Blog.findById(blog_id).lean();
+
+        if (!blog) {
+            throw new APIError(400, "Blog Not Found");
+        }
+
+        res.status(201).json(new APIResponse(201, { blog }, "Blog Fetched Successfully"));
     } catch (error) {
         next(error);
     }
