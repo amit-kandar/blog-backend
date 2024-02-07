@@ -5,10 +5,12 @@ import { asyncHandler } from "../utils/asyncHandler";
 import { User, UserDocument } from "../models/user.model";
 import { APIResponse } from "../utils/APIResponse";
 import { UploadApiResponse } from "cloudinary";
+import jwt from "jsonwebtoken";
 import redisClient from "../config/redis";
 import { uploadToCloudinary } from "../utils/cloudinary";
 import { createImageWithInitials } from "../utils/createImage";
 import { generateUniqueUsernameFromName } from "../utils/generateUsername";
+import mongoose from "mongoose";
 
 const generateRefreshTokenAndAccessToken = async (user_id: string): Promise<{ accessToken: string, refreshToken: string }> => {
     try {
@@ -230,6 +232,51 @@ export const logout = asyncHandler(async (req: Request, res: Response, next: Nex
             .clearCookie("refreshToken", { httpOnly: true, secure: true })
             .json(new APIResponse(200, {}, "User Signout Successfully"))
             .end();
+    } catch (error) {
+        next(error);
+    }
+});
+
+// @route   POST /api/v1/users/refresh-token
+// @desc    Get Access Token by Refresh Token
+// @access  Private
+export const getAccessTokenByRefreshToken = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
+
+        if (!incomingRefreshToken) {
+            throw new APIError(401, "Unauthorized Request, Signin Again");
+        }
+
+        const refreshSecret: string | undefined = process.env.REFRESH_TOKEN_SECRET;
+        if (!refreshSecret) {
+            throw new APIError(404, "Refresh Token Secret Not Found");
+        }
+
+        const decoded = jwt.verify(incomingRefreshToken, refreshSecret);
+        if (typeof decoded === "string") {
+            throw new APIError(400, "Invalid Decoded Information");
+        }
+
+        const user = await User.findById(decoded._id).select("-password");
+        if (!user) {
+            throw new APIError(400, "User Not Found");
+        }
+
+        if (user.refreshToken !== incomingRefreshToken) {
+            throw new APIError(401, "Unauthorized. Please Sign in Again");
+        }
+
+        const accessToken = await user.generateAccessToken();
+
+        res
+            .status(200)
+            .cookie("accessToken", accessToken, { httpOnly: true, secure: true })
+            .json(new APIResponse(
+                200,
+                { accessToken },
+                "Access Token Refreshed Successfully"
+            ));
     } catch (error) {
         next(error);
     }
