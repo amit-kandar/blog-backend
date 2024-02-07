@@ -46,6 +46,8 @@ const BlogSchema = new Schema<BlogDocument, Model<BlogDocument>>({
     tags: {
         type: [String],
         required: true,
+        index: true,
+        trim: true
     }
 }, { timestamps: true });
 
