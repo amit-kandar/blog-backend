@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { changeAvatar, changePassword, checkEmail, getAccessTokenByRefreshToken, getUserDetails, login, logout, register, updateUserDetails } from "../controllers/user.controller";
+import { changeAvatar, changePassword, checkEmail, getAccessTokenByRefreshToken, getUserDetails, login, logout, register, resetPassword, updateUserDetails } from "../controllers/user.controller";
 import { upload } from "../middlewares/multer.middleware";
 import { checkAuth } from "../middlewares/auth.middleware";
 
@@ -22,5 +22,7 @@ router.put('/', checkAuth, updateUserDetails);
 router.put('/change-avatar', checkAuth, upload.single('avatar'), changeAvatar);
 
 router.put('/change-password', checkAuth, changePassword);
+
+router.put('/reset-password', checkAuth, resetPassword);
 
 export default router;

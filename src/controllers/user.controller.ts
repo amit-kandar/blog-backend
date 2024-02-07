@@ -453,3 +453,27 @@ export const changePassword = asyncHandler(async (req: Request, res: Response, n
         next(error);
     }
 });
+
+// @route   POST /api/v1/users/reset-password
+// @desc    Reset password
+// @access  Private
+export const resetPassword = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const user = req.user;
+
+        if (!user) {
+            throw new APIError(401, "Unauthorized Request, Signin Again");
+        }
+
+        const { password } = req.body;
+
+        await User.updateOne(
+            { _id: user._id },
+            { $set: { password: password } },
+        );
+
+        res.status(200).json(new APIResponse(200, {}, "Password Reset Successful"));
+    } catch (error) {
+        next(error);
+    }
+});
