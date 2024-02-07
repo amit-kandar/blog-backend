@@ -79,13 +79,48 @@ export const createBlog = asyncHandler(async (req: Request, res: Response, next:
     }
 });
 
+// @route   GET /api/v1/blogs/
+// @desc    Get blogs
+// @access  Private
+export const getBlogs = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const user_id = req.user?._id;
+
+        if (!user_id) {
+            throw new APIError(401, "Unauthorized Request, Sign in Again");
+        }
+
+        // Extract page number and items per page from query parameters
+        const page: number = parseInt(req.query.page as string) || 1;
+        const limit: number = parseInt(req.query.limit as string) || 10;
+
+        // Calculate the skip value based on the page and limit
+        const skip = (page - 1) * limit;
+
+        const blogs = await Blog.find()
+            .skip(skip)
+            .limit(limit)
+            .lean();
+
+        const totalBlogsCount = await Blog.countDocuments();
+
+        if (!blogs) {
+            throw new APIError(404, "Blogs Not Found");
+        }
+
+        res.status(200).json(new APIResponse(200, { total: totalBlogsCount, blogs }, "Blogs Fetched Successfully"));
+    } catch (error) {
+        next(error);
+    }
+});
+
 // @route   GET /api/v1/blogs/:id
 // @desc    Get blog
 // @access  Private
 export const getBlogDetails = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
         const user_id = req.user?._id;
-        const blog_id = new mongoose.Types.ObjectId(req.params.id || req.body.id);
+        const blog_id = req.params.id || req.body.id;
 
         if (!user_id) {
             throw new APIError(401, "Unauthorized Request, Sign in Again");
