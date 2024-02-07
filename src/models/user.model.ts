@@ -6,7 +6,6 @@ import logger from '../config/logger';
 export interface UserDocument extends Document {
     name: string;
     username: string;
-    role: string;
     email: string;
     avatar: {
         url: string,
@@ -30,11 +29,6 @@ const UserSchema = new Schema<UserDocument, Model<UserDocument>>({
         required: true,
         trim: true,
         index: true
-    },
-    role: {
-        type: String,
-        enum: ['regular', 'admin'],
-        default: 'regular'
     },
     email: {
         type: String,
