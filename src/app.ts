@@ -3,6 +3,7 @@ import cors from "cors";
 import { DATA_LIMIT } from "./constants";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
+import redisClient from "./config/redis";
 
 const app: Application = express();
 
@@ -20,6 +21,8 @@ app.use(express.static("public"));
 app.use(cookieParser());
 
 app.use(helmet());
+
+redisClient.connect();
 
 app.get("/", (req, res) => {
     res.status(200).json("Hello World")
