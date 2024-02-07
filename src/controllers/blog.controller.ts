@@ -1,10 +1,9 @@
 import { NextFunction, Request, Response } from "express";
-import validator from "validator";
-import { User } from "../models/user.model";
+import mongoose from "mongoose";
+import { v2 as cloudinary } from "cloudinary";
 import { APIError } from "../utils/APIError";
 import { APIResponse } from "../utils/APIResponse";
 import { asyncHandler } from "../utils/asyncHandler";
-import mongoose from "mongoose";
 import { UploadApiResponse } from "cloudinary";
 import { uploadToCloudinary } from "../utils/cloudinary";
 import { Blog } from "../models/blog.model";
@@ -17,7 +16,7 @@ export const createBlog = asyncHandler(async (req: Request, res: Response, next:
         const user_id = req.user?._id;
         const { title, content, tags } = req.body;
 
-        if (!mongoose.Types.ObjectId.isValid(user_id)) {
+        if (!user_id) {
             throw new APIError(401, "Unauthorized Request, Sign in Again");
         }
 
@@ -88,11 +87,11 @@ export const getBlogDetails = asyncHandler(async (req: Request, res: Response, n
         const user_id = req.user?._id;
         const blog_id = new mongoose.Types.ObjectId(req.params.id || req.body.id);
 
-        if (!mongoose.Types.ObjectId.isValid(user_id)) {
+        if (!user_id) {
             throw new APIError(401, "Unauthorized Request, Sign in Again");
         }
 
-        if (!mongoose.Types.ObjectId.isValid(blog_id)) {
+        if (!blog_id) {
             throw new APIError(400, "Blog ID Is Required");
         }
 
@@ -117,11 +116,11 @@ export const updateBlog = asyncHandler(async (req: Request, res: Response, next:
         const blog_id = new mongoose.Types.ObjectId(req.params.id || req.body.id);
         const { title, content } = req.body;
 
-        if (!mongoose.Types.ObjectId.isValid(user_id)) {
+        if (!user_id) {
             throw new APIError(401, "Unauthorized Request, Sign in Again");
         }
 
-        if (!mongoose.Types.ObjectId.isValid(blog_id)) {
+        if (!blog_id) {
             throw new APIError(400, "Blog ID Is Required");
         }
 
@@ -148,3 +147,37 @@ export const updateBlog = asyncHandler(async (req: Request, res: Response, next:
         next(error);
     }
 });
+
+// @route   DELETE /api/v1/blogs/:id
+// @desc    Delete blog
+// @access  Private
+export const deleteBlog = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const user_id = req.user?._id;
+        const blog_id = req.params.id || req.body.id;
+
+        if (!user_id) {
+            throw new APIError(401, "Unauthorized Request, Sign in Again");
+        }
+
+        if (!blog_id) {
+            throw new APIError(400, "Blog ID Is Required");
+        }
+
+        const blog = await Blog.findById(blog_id).lean();
+        if (!blog) {
+            throw new APIError(400, "Blog Not Found");
+        }
+
+        const public_id = blog.image?.public_id;
+        if (public_id) {
+            await cloudinary.uploader.destroy(public_id);
+        }
+
+        await Blog.deleteOne({ _id: blog_id });
+
+        res.status(200).json(new APIResponse(200, {}, "Blog Deleted Successfully"));
+    } catch (error) {
+        next(error);
+    }
+})
