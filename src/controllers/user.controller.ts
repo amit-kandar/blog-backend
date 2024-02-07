@@ -20,7 +20,7 @@ const generateRefreshTokenAndAccessToken = async (user_id: string): Promise<{ ac
         const refreshToken: string = await user.generateRefreshToken();
 
         user.refreshToken = refreshToken;
-        user.save({ validateBeforeSave: false });
+        await user.save({ validateBeforeSave: false });
         return { accessToken, refreshToken };
     } catch (error) {
         throw new APIError(500, "Something Went Wrong While Generating AccessToken And RefreshToken");
@@ -64,7 +64,7 @@ export const checkEmail = asyncHandler(async (req: Request, res: Response, next:
 });
 
 // @route   POST /api/v1/users/signup
-// @desc    User signup
+// @desc    User Register
 // @access  Public
 export const register = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -136,6 +136,72 @@ export const register = asyncHandler(async (req: Request, res: Response, next: N
                     "User Registered Successfully"
                 )
             );
+    } catch (error) {
+        next(error);
+    }
+});
+
+// @route   POST /api/v1/users/signin
+// @desc    User login
+// @access  Public
+export const login = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        // Get user credentials
+        const { email, username, password } = req.body;
+
+        // Check for empty fields
+        if ((!email && !username) || !password) {
+            throw new APIError(400, (!email && !username) ? "Email Or Username Is Required" : "Password Is Required");
+        }
+
+        // Check email validation
+        if (email && !validator.isEmail(email)) {
+            throw new APIError(400, "Invalid Email");
+        }
+
+        // Retrieve the user using email or username
+        const user = await User.findOne({ $or: [{ username }, { email }] });
+
+        // Check if the user exists
+        if (!user) {
+            throw new APIError(404, "User Doesn't Exist");
+        }
+
+        // Compare input password and existing user password
+        const isValidPassword: boolean = await user.isCorrectPassword(password);
+
+        if (!isValidPassword) {
+            throw new APIError(401, "Invalid User Credentials");
+        }
+
+        // Generate refresh token and access token and set refreshToken into the database
+        const { accessToken, refreshToken } = await generateRefreshTokenAndAccessToken(user._id);
+
+        // Retrieve the user from the database again because refresh token has been set
+        const newUser = await User.findById(user._id).select("-password -refreshToken");
+
+        // Validate retrieved user data
+        if (!newUser) {
+            throw new APIError(400, "Invalid Retrieved User Data");
+        }
+
+        // Store user data in Redis cache
+        await redisClient.setEx(`${user._id}`, 3600, JSON.stringify(newUser));
+
+        // Set the refreshToken and accessToken to cookies and send back user
+        res
+            .status(200)
+            .cookie("accessToken", accessToken, { httpOnly: true, secure: true })
+            .cookie("refreshToken", refreshToken, { httpOnly: true, secure: true })
+            .json(new APIResponse(
+                200,
+                {
+                    user: newUser,
+                    accessToken,
+                    refreshToken
+                },
+                "User Successfully Logged In"
+            ));
     } catch (error) {
         next(error);
     }
