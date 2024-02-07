@@ -419,3 +419,37 @@ export const changeAvatar = asyncHandler(async (req: Request, res: Response, nex
         next(error);
     }
 });
+
+// @route   PUT /api/v1/users/change-password
+// @desc    Change password
+// @access  Private
+export const changePassword = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const user_id = req.user?._id;
+
+        if (!mongoose.Types.ObjectId.isValid(user_id)) {
+            throw new APIError(401, "Unauthorized Request, Signin Again");
+        }
+
+        const { current_password, new_password } = req.body;
+
+        const user = await User.findById(user_id);
+        if (!user) {
+            throw new APIError(404, "User Not Found");
+        }
+
+        const isCorrectPassword = await user.isCorrectPassword(current_password);
+
+        if (!isCorrectPassword) {
+            throw new APIError(400, "Incorrect Current Password");
+        }
+
+        user.password = new_password;
+
+        await user.save();
+
+        res.status(200).json(new APIResponse(200, {}, "Password Changed Successfully"));
+    } catch (error) {
+        next(error);
+    }
+});
