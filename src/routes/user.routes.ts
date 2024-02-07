@@ -23,6 +23,6 @@ router.put('/change-avatar', checkAuth, upload.single('avatar'), changeAvatar);
 
 router.put('/change-password', checkAuth, changePassword);
 
-router.put('/reset-password', checkAuth, resetPassword);
+router.post('/reset-password', checkAuth, resetPassword);
 
 export default router;
