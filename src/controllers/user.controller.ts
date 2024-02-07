@@ -302,3 +302,65 @@ export const getUserDetails = asyncHandler(async (req: Request, res: Response, n
         next(error);
     }
 });
+
+// @route   PUT /api/v1/users/
+// @desc    Update user details
+// @access  Private
+export const updateUserDetails = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const user_id = req.user?._id;
+
+        if (!mongoose.Types.ObjectId.isValid(user_id)) {
+            throw new APIError(401, "Unauthorized Request, Signin Again");
+        }
+
+        const { name, email } = req.body;
+        const user = req.user;
+
+        if (!name && !email) {
+            throw new APIError(400, "At Least One Field Is Required");
+        }
+
+        // Check if the email exists in the database
+        if (email) {
+            if (!validator.isEmail(email)) {
+                throw new APIError(400, "Invalid Email");
+            }
+            const userWithEmail = await User.findOne({ email }).lean();
+            if (userWithEmail) {
+                throw new APIError(400, "Email Already In Use");
+            }
+        }
+
+        if (user?.name === name || user?.email === email) {
+            throw new APIError(400, "Given Value Already Exists");
+        }
+
+        const updatedUserDetails = await User.findOneAndUpdate(
+            { _id: user_id },
+            { $set: { name: name, email: email } },
+            { new: true, select: "-password -refreshToken" }
+        );
+
+        if (!updatedUserDetails) {
+            throw new APIError(404, 'User Details Were Not Updated Or Not Found');
+        }
+
+        if (name) {
+            user.name = name;
+        }
+        if (email) {
+            user.email = email;
+        }
+
+        await redisClient.set(`${user_id}`, JSON.stringify(user))
+
+        res.status(200).json(new APIResponse(
+            200,
+            { user: updatedUserDetails },
+            "User updated successfully"
+        ));
+    } catch (error) {
+        next(error);
+    }
+});
