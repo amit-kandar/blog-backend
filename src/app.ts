@@ -1,4 +1,5 @@
 import express, { Application } from "express";
+import rateLimit from "express-rate-limit";
 import cors from "cors";
 import { DATA_LIMIT } from "./constants";
 import cookieParser from "cookie-parser";
@@ -22,6 +23,13 @@ app.use(express.static("public"));
 app.use(cookieParser());
 
 app.use(helmet());
+
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+});
+
+app.use(limiter);
 
 redisClient.connect();
 
